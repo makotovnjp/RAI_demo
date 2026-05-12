@@ -71,20 +71,23 @@ MESH_URLS = {
     for name in ["base", "link1", "link2", "link3", "link4", "link5", "link6"]
 }
 CACHE_DIR = "stl_cache"
-DECIMATE = 15   # 1/15 のフェースを残す → 約 450~1000 三角形/リンク
+DECIMATE = 8    # 1/8 のフェースを残す → 約 430~1900 三角形/リンク
 
-# --- 照明 & リンクベース色 (Lambert シェーディング用) ---
-_LIGHT = np.array([1.0, 0.8, 2.5], dtype=float)
-LIGHT_DIR = _LIGHT / np.linalg.norm(_LIGHT)
+# --- 照明 (Phong: キーライト + フィルライト) ---
+_LIGHT = np.array([1.2, 0.8, 2.0], dtype=float)
+LIGHT_DIR = _LIGHT / np.linalg.norm(_LIGHT)   # キーライト (斜め上)
+_FILL  = np.array([-0.5, -0.4, 0.8], dtype=float)
+FILL_DIR  = _FILL  / np.linalg.norm(_FILL)    # フィルライト (逆方向)
 
+# Lite 6 実機に近い白/シルバー系カラー
 LINK_BASE_COLORS_RGB = [
-    [0.82, 0.84, 0.88],  # base
-    [0.72, 0.75, 0.83],  # link1
-    [0.82, 0.84, 0.88],  # link2
-    [0.72, 0.75, 0.83],  # link3
-    [0.82, 0.84, 0.88],  # link4
-    [0.72, 0.75, 0.83],  # link5
-    [0.60, 0.68, 0.82],  # link6 (EEF) — ブルーアクセント
+    [0.94, 0.94, 0.95],  # base   — オフホワイト
+    [0.80, 0.82, 0.87],  # link1  — シルバー
+    [0.94, 0.94, 0.95],  # link2  — オフホワイト
+    [0.80, 0.82, 0.87],  # link3  — シルバー
+    [0.94, 0.94, 0.95],  # link4  — オフホワイト
+    [0.80, 0.82, 0.87],  # link5  — シルバー
+    [0.68, 0.74, 0.85],  # link6  — ブルーアクセント (EEF)
 ]
 
 
@@ -108,20 +111,22 @@ def download_stl(name: str) -> bytes:
     return data
 
 
-def parse_stl(data: bytes) -> np.ndarray:
-    """
-    バイナリ STL → (N, 3, 3) 三角形配列 [m単位]
-    """
+# numpy 構造体型 (50 bytes/record): normal(12) + v0(12) + v1(12) + v2(12) + attr(2)
+_STL_DTYPE = np.dtype([
+    ('normal', '<f4', 3),
+    ('v0',     '<f4', 3),
+    ('v1',     '<f4', 3),
+    ('v2',     '<f4', 3),
+    ('attr',   '<u2'),
+])
+
+def parse_stl(data: bytes) -> Tuple[np.ndarray, np.ndarray]:
+    """バイナリ STL → (N,3,3) 頂点配列, (N,3) 法線配列 [m単位]"""
     num = struct.unpack_from("<I", data, 80)[0]
-    tris = np.zeros((num, 3, 3), dtype=np.float32)
-    offset = 84
-    for i in range(num):
-        offset += 12  # ノーマル skip
-        tris[i, 0] = struct.unpack_from("<fff", data, offset); offset += 12
-        tris[i, 1] = struct.unpack_from("<fff", data, offset); offset += 12
-        tris[i, 2] = struct.unpack_from("<fff", data, offset); offset += 12
-        offset += 2
-    return tris
+    records = np.frombuffer(data, dtype=_STL_DTYPE, offset=84, count=num)
+    tris    = np.stack([records['v0'], records['v1'], records['v2']], axis=1).copy()
+    normals = records['normal'].copy()
+    return tris, normals
 
 
 def decimate(tris: np.ndarray, factor: int) -> np.ndarray:
@@ -129,37 +134,51 @@ def decimate(tris: np.ndarray, factor: int) -> np.ndarray:
     return tris[::factor]
 
 
-def compute_face_colors(tris_mm: np.ndarray, base_rgb: list,
-                        ambient: float = 0.35, diffuse: float = 0.65) -> np.ndarray:
+def compute_face_colors(tris_mm: np.ndarray, normals_local: np.ndarray,
+                        base_rgb: list) -> np.ndarray:
     """
-    ローカルメッシュ空間での Lambert シェーディング
-    戻り値: (N, 4) RGBA 配列 (各フェースに1色)
+    Phong シェーディング (STL 格納法線 + フォールバック計算)
+    戻り値: (N, 4) RGBA 配列
     """
-    v0, v1, v2 = tris_mm[:, 0], tris_mm[:, 1], tris_mm[:, 2]
-    n = np.cross(v1 - v0, v2 - v0).astype(np.float64)
-    norms = np.linalg.norm(n, axis=1, keepdims=True)
+    n = normals_local.astype(np.float64)
+    norms = np.linalg.norm(n, axis=1)
+    bad = norms < 1e-10
+    if bad.any():                                         # 縮退フェースは頂点計算
+        v0, v1, v2 = tris_mm[bad, 0], tris_mm[bad, 1], tris_mm[bad, 2]
+        n[bad] = np.cross(v1 - v0, v2 - v0)
+        norms[bad] = np.linalg.norm(n[bad], axis=1)
     norms = np.where(norms < 1e-10, 1.0, norms)
-    n_hat = n / norms
-    dots = np.abs(n_hat.dot(LIGHT_DIR))               # 両面ライティング
-    brightness = np.clip(ambient + diffuse * dots, 0, 1)
-    bc = np.array(base_rgb, dtype=float)
-    colors = np.clip(brightness[:, None] * bc, 0, 1)  # (N, 3)
-    alpha = np.full((len(colors), 1), 0.95)
-    return np.hstack([colors, alpha])                  # (N, 4)
+    n = n / norms[:, None]                                # 単位化
+
+    # 両面 Lambert (キー + フィル)
+    d_key  = np.abs(n @ LIGHT_DIR)
+    d_fill = np.abs(n @ FILL_DIR)
+
+    # Blinn-Phong スペキュラー (キーライトのみ)
+    _view = np.array([0.4, 0.1, 1.0]); _view /= np.linalg.norm(_view)
+    _half = LIGHT_DIR + _view;          _half /= np.linalg.norm(_half)
+    spec  = np.clip(n @ _half, 0, 1) ** 32
+
+    brightness = np.clip(0.28 + 0.48 * d_key + 0.12 * d_fill + 0.20 * spec, 0, 1)
+    bc     = np.array(base_rgb, dtype=float)
+    colors = np.clip(brightness[:, None] * bc, 0, 1)
+    alpha  = np.full((len(colors), 1), 0.97)
+    return np.hstack([colors, alpha])                     # (N, 4)
 
 
 def load_meshes() -> Dict[str, tuple]:
-    """全リンクメッシュをダウンロード・パース・デシメーション・シェーディング計算"""
+    """全リンクメッシュをダウンロード・パース・デシメーション・Phong シェーディング計算"""
     meshes = {}
     names = ["base", "link1", "link2", "link3", "link4", "link5", "link6"]
     for idx, name in enumerate(names):
         raw = download_stl(name)
-        tris = parse_stl(raw)
-        tris_d = decimate(tris, DECIMATE)
-        tris_mm = tris_d * 1000.0  # m → mm
-        face_colors = compute_face_colors(tris_mm, LINK_BASE_COLORS_RGB[idx])
+        tris, normals = parse_stl(raw)
+        tris_d    = tris[::DECIMATE]
+        normals_d = normals[::DECIMATE]
+        tris_mm   = tris_d * 1000.0  # m → mm
+        face_colors = compute_face_colors(tris_mm, normals_d, LINK_BASE_COLORS_RGB[idx])
         meshes[name] = (tris_mm, face_colors)
-        print(f"  {name}.stl: {len(tris)} → {len(tris_d)} 三角形")
+        print(f"  {name}.stl: {len(tris)} -> {len(tris_d)} tris")
     return meshes
 
 
@@ -410,9 +429,9 @@ def create_animation(meshes: Dict[str, np.ndarray]):
     for i, name in enumerate(link_names):
         tris_mm_local, face_colors = meshes[name]
         tris_world = transform_mesh(tris_mm_local, Ts0[i])
-        coll = Poly3DCollection(tris_world, linewidth=0)
-        coll.set_facecolor(face_colors)       # per-face Lambert shading
-        coll.set_edgecolor("none")
+        coll = Poly3DCollection(tris_world, linewidth=0.15)
+        coll.set_facecolor(face_colors)       # per-face Phong shading
+        coll.set_edgecolor("#111122")         # 細い暗エッジでCAD感
         ax.add_collection3d(coll)
         link_collections.append(coll)
 
@@ -425,8 +444,8 @@ def create_animation(meshes: Dict[str, np.ndarray]):
                                depthshade=False)
 
     # グリッパー
-    grip_L, = ax.plot([], [], [], color="#e94560", linewidth=3, zorder=11)
-    grip_R, = ax.plot([], [], [], color="#e94560", linewidth=3, zorder=11)
+    grip_L, = ax.plot([], [], [], color="#ff5533", linewidth=5, zorder=11, solid_capstyle="round")
+    grip_R, = ax.plot([], [], [], color="#ff5533", linewidth=5, zorder=11, solid_capstyle="round")
 
     # TCP 軌跡
     tcp_trail, = ax.plot([], [], [], color="#4488cc", lw=0.8, alpha=0.5,
@@ -466,10 +485,15 @@ def create_animation(meshes: Dict[str, np.ndarray]):
     prog_bar, = ax_info.plot([0.05, 0.05], [0.105, 0.105], color="#ff6b35",
                               lw=14, solid_capstyle="butt")
 
-    # 関節角度テキスト — 明るいシアン系
-    joint_text = ax_info.text(0.05, 0.58, "", ha="left", va="top",
-                               color="#b8deff", fontsize=8.0,
-                               fontfamily="monospace", linespacing=1.65)
+    # 関節角度テキスト — 白文字 + 濃い背景ボックスで確実に視認
+    joint_text = ax_info.text(0.05, 0.60, "", ha="left", va="top",
+                               color="#ffffff", fontsize=9.0,
+                               fontfamily="monospace", linespacing=1.8,
+                               bbox=dict(boxstyle="square,pad=0.45",
+                                         facecolor="#0a1a30",
+                                         edgecolor="#2255aa",
+                                         linewidth=1.2,
+                                         alpha=1.0))
 
     # フレームカウンター
     frame_ctr = ax_info.text(0.95, 0.04, "", ha="right", va="bottom",
@@ -552,10 +576,10 @@ def create_animation(meshes: Dict[str, np.ndarray]):
         log_text.set_text("\n".join(LOG_LINES))
         task_label.set_text(label)
 
-        # 関節角度表示
+        # 関節角度表示 (ASCII only — glyph fallback 回避)
         joint_text.set_text(
-            "関節角度:\n" +
-            "\n".join(f"  J{i+1}: {np.degrees(a):+7.1f}°" for i, a in enumerate(q))
+            "Joint Angles:\n" +
+            "\n".join(f"  J{i+1}: {np.degrees(a):+7.1f} deg" for i, a in enumerate(q))
         )
 
         # プログレスバー
