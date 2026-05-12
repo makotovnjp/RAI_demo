@@ -1,0 +1,287 @@
+<!-- ================================================================
+  WIX EDITOR 貼り付け用ブログ記事
+  使い方:
+    1. Wix Editor でブログ記事を開く
+    2. テキストブロックを選択 → 右クリック → "HTMLを編集" または
+       ツールバーの "<>" アイコンをクリック
+    3. このファイルの内容をそのまま貼り付け
+  ================================================================ -->
+
+<style>
+  .rai-blog { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1a1a2e; line-height: 1.75; max-width: 820px; margin: 0 auto; padding: 0 16px; }
+  .rai-blog h1 { font-size: 2rem; font-weight: 800; color: #0f3460; border-bottom: 4px solid #e94560; padding-bottom: 12px; margin-bottom: 8px; }
+  .rai-blog .meta { font-size: 0.85rem; color: #666; margin-bottom: 32px; }
+  .rai-blog h2 { font-size: 1.5rem; font-weight: 700; color: #0f3460; margin-top: 48px; margin-bottom: 16px; border-left: 5px solid #e94560; padding-left: 12px; }
+  .rai-blog h3 { font-size: 1.15rem; font-weight: 700; color: #16213e; margin-top: 32px; margin-bottom: 10px; }
+  .rai-blog p { margin-bottom: 16px; }
+  .rai-blog a { color: #e94560; text-decoration: none; }
+  .rai-blog a:hover { text-decoration: underline; }
+  .rai-blog table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9rem; }
+  .rai-blog th { background: #0f3460; color: #fff; padding: 10px 14px; text-align: left; }
+  .rai-blog td { padding: 9px 14px; border-bottom: 1px solid #dde; }
+  .rai-blog tr:nth-child(even) td { background: #f5f7fa; }
+  .rai-blog pre { background: #1a1a2e; color: #e0e0e0; padding: 20px; border-radius: 8px; overflow-x: auto; font-size: 0.82rem; line-height: 1.6; margin: 20px 0; }
+  .rai-blog code { font-family: 'Fira Code', 'Courier New', monospace; }
+  .rai-blog .highlight-box { background: #eef2ff; border-left: 4px solid #4361ee; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 24px 0; }
+  .rai-blog .badge { display: inline-block; background: #e94560; color: #fff; font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin: 0 4px 4px 0; }
+  .rai-blog .arch-box { background: #1a1a2e; color: #a0e7e5; font-family: monospace; padding: 20px; border-radius: 8px; font-size: 0.8rem; line-height: 1.8; white-space: pre; overflow-x: auto; margin: 20px 0; }
+  .rai-blog ul { padding-left: 22px; margin-bottom: 16px; }
+  .rai-blog li { margin-bottom: 6px; }
+  .rai-blog .tip { background: #fffbea; border: 1px solid #f6d860; padding: 14px 18px; border-radius: 8px; margin: 20px 0; font-size: 0.92rem; }
+</style>
+
+<div class="rai-blog">
+
+  <h1>ROS2最新動向 × RAIフレームワーク入門<br>UFACTORY Lite 6でAI自律操作を実現する</h1>
+
+  <p class="meta">
+    公開日: 2026年5月12日 &nbsp;|&nbsp;
+    <span class="badge">ROS2</span>
+    <span class="badge">RAI</span>
+    <span class="badge">Embodied AI</span>
+    <span class="badge">UFACTORY Lite 6</span>
+    <span class="badge">LLM</span>
+  </p>
+
+  <p>ロボット開発の世界が急速に「AIエージェントとの統合」フェーズへ進んでいます。2025年5月にROS1（Noetic）が正式にEOLを迎え、2026年現在はROS2がデファクトスタンダードとして確立されました。</p>
+
+  <p>そんな中、注目を集めているのが <strong>RAI（Robotec AI Framework）</strong>です。LLM/VLMとROS2を橋渡しするエージェントフレームワークで、自然言語でロボットを操作する「Physical AI」の実現を目指しています。</p>
+
+  <div class="highlight-box">
+    <strong>本記事の内容</strong><br>
+    1️⃣ ROS2の最新動向（2026年版）<br>
+    2️⃣ RAIフレームワークの概要と使い方<br>
+    3️⃣ RAI × UFACTORY Lite 6 実装サンプル<br>
+    4️⃣ 実行デモ動画の解説
+  </div>
+
+  <!-- ===== セクション1 ===== -->
+  <h2>1. ROS2最新動向（2026年）</h2>
+
+  <h3>ROS2 Kilted Kaiju リリース</h3>
+  <p>2026年5月現在の最新LTS版は <strong>ROS2 Kilted Kaiju</strong>（サポート〜2026年11月）。主なアップデートは以下の通りです。</p>
+
+  <table>
+    <tr><th>項目</th><th>内容</th></tr>
+    <tr><td>DDS通信</td><td>Zenoh対応強化・ROS2-Zenoh Bridgeが安定版に</td></tr>
+    <tr><td>ros2_control</td><td>ハードウェアインターフェース抽象化の改善</td></tr>
+    <tr><td>Nav2</td><td>Dynamic obstacle avoidanceが標準搭載</td></tr>
+    <tr><td>MoveIt 2</td><td>Pilz Industrial Motion Plannerが完全統合</td></tr>
+    <tr><td>セキュリティ</td><td>SROS2の設定が大幅に簡素化</td></tr>
+  </table>
+
+  <h3>ROS1 EOL とエコシステムの成熟</h3>
+  <ul>
+    <li><strong>2025年5月</strong>: ROS1 Noetic 正式EOL</li>
+    <li>PAL Roboticsなどが ROS2 への完全移行を完了</li>
+    <li>MoveIt 2、Nav2 ともに ROS1 相当以上の機能を達成</li>
+    <li><code>ros2_control</code> と fieldbus統合による産業用途での採用が急拡大</li>
+    <li>ROSCon 2026は <strong>カナダ・トロント</strong> で開催予定</li>
+  </ul>
+
+  <h3>2026年のROS2開発トレンド</h3>
+  <pre><code>ROS2 主要トレンド
+├── Behavior Tree（BT）ベースのタスク設計が主流に
+├── LLM/VLMによるタスクプランニング統合
+├── デジタルツイン（O3DE, Gazebo Harmonic）との連携
+└── エッジAI（Jetson Orin, RK3588）でのリアルタイム推論</code></pre>
+
+  <!-- ===== セクション2 ===== -->
+  <h2>2. RAIフレームワーク概要</h2>
+
+  <h3>RAIとは？</h3>
+  <p><strong>RAI（Robotec AI Framework）</strong>は、<a href="https://github.com/RobotecAI/rai" target="_blank">Robotec.ai</a>が開発するオープンソースの <strong>Physical AIエージェントフレームワーク</strong>です。</p>
+
+  <div class="highlight-box">
+    <em>"RAI is a vendor agnostic agentic framework for Physical AI robotics, utilizing ROS 2 tools to perform complex actions, defined scenarios, free interface execution, log summaries, voice interaction and more."</em><br>
+    <small>— GitHub: RobotecAI/rai</small>
+  </div>
+
+  <p>2025年5月にarXiv論文「<a href="https://arxiv.org/abs/2505.07532" target="_blank">RAI: Flexible Agent Framework for Embodied AI</a>」(arXiv:2505.07532) として発表され、学術界でも注目されています。</p>
+
+  <h3>RAIの3層アーキテクチャ</h3>
+  <div class="arch-box">┌─────────────────────────────────────────────────────────┐
+│                     RAI Architecture                     │
+├─────────────────────────────────────────────────────────┤
+│  Layer 3: Agents（LLMエージェント）                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────────┐  │
+│  │ Task Agent   │  │ Voice Agent  │  │ Vision Agent  │  │
+│  │ (ReAct LLM)  │  │ (ASR + TTS)  │  │ (VLM)         │  │
+│  └──────────────┘  └──────────────┘  └───────────────┘  │
+├─────────────────────────────────────────────────────────┤
+│  Layer 2: Connectors（センサー/アクチュエータ抽象化）      │
+│  ROS2Connector | SimConnector | HardwareConnector        │
+├─────────────────────────────────────────────────────────┤
+│  Layer 1: Tools（LLMツール呼び出し機構）                  │
+│  MoveArmTo | GripperCtl | GetImage | LogSummary          │
+└─────────────────────────────────────────────────────────┘
+                   ↓ ROS 2 Middleware ↓
+             実ロボット / デジタルツイン</div>
+
+  <h3>主要コンポーネント</h3>
+  <p><strong>Agents</strong>: <code>run()</code>/<code>stop()</code>メソッドを実装するMAS（Multi-Agent System）の基本単位。ReActアーキテクチャのLLMとして動作し、OpenAI / Anthropic Claude / ローカルLLMに対応。</p>
+  <p><strong>Connectors</strong>: ROS2のtopic・service・actionを通じてセンサーデータの読み取りとアクチュエータへの指令を行う。</p>
+  <p><strong>Tools</strong>: LLMのtool-callingで呼び出せる関数群。<code>@tool</code>デコレータで独自ツールを追加可能。</p>
+
+  <pre><code># 対応LLMバックエンド例
+agent = create_react_agent(model="claude-sonnet-4-6",    tools=robot_tools)  # Anthropic
+agent = create_react_agent(model="gpt-4o",               tools=robot_tools)  # OpenAI
+agent = create_react_agent(model="ollama/llama3.2",      tools=robot_tools)  # ローカル</code></pre>
+
+  <!-- ===== セクション3 ===== -->
+  <h2>3. UFACTORY Lite 6 について</h2>
+
+  <table>
+    <tr><th>項目</th><th>仕様</th></tr>
+    <tr><td>自由度</td><td>6軸</td></tr>
+    <tr><td>可搬質量</td><td>0.5 kg</td></tr>
+    <tr><td>リーチ</td><td>440 mm</td></tr>
+    <tr><td>繰り返し精度</td><td>±0.1 mm</td></tr>
+    <tr><td>重量</td><td>4.2 kg</td></tr>
+    <tr><td>通信</td><td>Ethernet (TCP/IP) / ROS2対応</td></tr>
+    <tr><td>ROS2パッケージ</td><td>xarm_ros2（公式GitHub）</td></tr>
+  </table>
+
+  <pre><code># Lite6 ROS2セットアップ
+git clone https://github.com/xArm-Developer/xarm_ros2.git
+colcon build --symlink-install
+
+# ドライバ起動
+ros2 launch xarm_api lite6_driver.launch.py robot_ip:=192.168.1.xxx</code></pre>
+
+  <!-- ===== セクション4 ===== -->
+  <h2>4. RAI × UFACTORY Lite 6 実装</h2>
+
+  <h3>システム構成</h3>
+  <div class="arch-box">[ユーザー自然言語入力]
+        ↓
+[RAI Task Agent]  ←→  [Claude claude-sonnet-4-6 / GPT-4o]
+        ↓  Tool calling（自律選択）
+[Lite6 Tools]
+  ├── move_to_pose()     ← デカルト空間移動
+  ├── control_gripper()  ← 開閉制御
+  ├── get_camera_image() ← VLMによる状況確認
+  └── get_joint_angles() ← 関節角取得
+        ↓
+[ROS2Connector]
+  ├── /ufactory/set_position (service)
+  └── /camera/image_raw      (topic)
+        ↓
+[UFACTORY Lite 6 実機]</div>
+
+  <h3>クイックスタート</h3>
+  <pre><code># 1. 必要パッケージのインストール
+pip install anthropic numpy opencv-python-headless
+
+# 2. 環境変数設定
+export ANTHROPIC_API_KEY=your-api-key-here
+
+# 3. Lite6ドライバ起動（別ターミナル）
+ros2 launch xarm_api lite6_driver.launch.py robot_ip:=192.168.1.xxx
+
+# 4. RAIエージェント起動（インタラクティブモード）
+python3 rai_lite6_agent.py
+
+# シミュレーションモード（実機なし）
+RAI_SIM=1 python3 rai_lite6_agent.py
+
+# デモシナリオ自動実行
+RAI_DEMO=1 python3 rai_lite6_agent.py</code></pre>
+
+  <h3>コアコード抜粋: エージェントのReActループ</h3>
+  <pre><code>class RAILite6Agent:
+    def run_task(self, task: str, max_iterations: int = 25) -> str:
+        self.conversation_history.append({"role": "user", "content": task})
+
+        for i in range(max_iterations):
+            # LLMに問い合わせ
+            response = self.client.messages.create(
+                model="claude-sonnet-4-6",
+                tools=self.tools_handler.get_tool_definitions(),
+                messages=self.conversation_history,
+            )
+
+            # 終了判定
+            if response.stop_reason == "end_turn":
+                return response.content[0].text
+
+            # ツール実行
+            for tool_use in [b for b in response.content if b.type == "tool_use"]:
+                result = self.tools_handler.execute_tool(
+                    tool_use.name, tool_use.input
+                )
+                # 結果を会話に追加 → 次のLLM呼び出しへ
+                ...</code></pre>
+
+  <h3>動作例: インタラクティブセッション</h3>
+  <pre><code>[You] テーブルを確認して、赤いブロックをつかんで右側に置いてください
+
+[Agent] カメラで状況を確認します。
+
+[Tool→] get_camera_image({})
+[←Tool] 画像取得: 1280x720px, 輝度=128.4
+
+[Agent] 赤いブロックが中央付近に見えます。把持シーケンスを開始します。
+
+[Tool→] move_to_pose({"x": 300, "y": 80, "z": 250, "speed": 100})
+[←Tool] 移動成功: (300.0, 80.0, 250.0) mm
+
+[Tool→] control_gripper({"position": 1.0})
+[←Tool] グリッパー開き(1.00): 成功
+
+[Tool→] move_to_pose({"x": 300, "y": 80, "z": 80, "speed": 50})
+[←Tool] 移動成功: (300.0, 80.0, 80.0) mm
+
+[Tool→] control_gripper({"position": 0.2})
+[←Tool] グリッパー閉じ(0.20): 成功
+
+...（持ち上げ → 移送 → 解放 → ホーム帰還）
+
+[Agent] 完了。赤いブロックを右側ゾーンへ移動しました。</code></pre>
+
+  <!-- ===== セクション5 ===== -->
+  <h2>5. デモ動画の内容</h2>
+
+  <table>
+    <tr><th>時間</th><th>シナリオ</th><th>内容</th></tr>
+    <tr><td>0:00〜1:00</td><td>イントロ＆構成説明</td><td>アーキテクチャ図解説</td></tr>
+    <tr><td>1:00〜2:00</td><td>基本操作</td><td>「ホームに移動して」等の自然言語コマンド</td></tr>
+    <tr><td>2:00〜3:30</td><td>VLM + ピック＆プレース</td><td>カメラ画像→物体認識→把持→移送</td></tr>
+    <tr><td>3:30〜4:30</td><td>自律マルチタスク</td><td>複数物体を自動分類・配置</td></tr>
+    <tr><td>4:30〜5:00</td><td>まとめ</td><td>GitHub・参考リンク紹介</td></tr>
+  </table>
+
+  <!-- ===== セクション6 ===== -->
+  <h2>6. パフォーマンス比較</h2>
+
+  <table>
+    <tr><th>LLMモデル</th><th>応答速度</th><th>ツール精度</th><th>コスト</th></tr>
+    <tr><td>Claude claude-sonnet-4-6</td><td>★★★★☆</td><td>★★★★★</td><td>中</td></tr>
+    <tr><td>GPT-4o</td><td>★★★★☆</td><td>★★★★☆</td><td>中</td></tr>
+    <tr><td>Llama 3.2 (Ollama・ローカル)</td><td>★★★☆☆</td><td>★★★☆☆</td><td>低</td></tr>
+  </table>
+
+  <div class="tip">
+    💡 <strong>現時点の制限事項</strong>: LLM APIコール（0.5〜2秒）がリアルタイム制御の制約になります。
+    高速応答が必要な場合はローカルLLM（Ollama + Llama）の利用も検討してください。
+  </div>
+
+  <!-- ===== まとめ ===== -->
+  <h2>まとめ</h2>
+  <p>ROS2が産業用ロボット開発のデファクトスタンダードとなった2026年において、<strong>RAIフレームワーク</strong>はLLM/VLMとロボティクスを接続する実用的なソリューションです。</p>
+  <p>UFACTORY Lite 6はコンパクトながら6軸の自由度を持ち、RAIとの組み合わせで自然言語による自律操作が実現できます。本記事のサンプルコードをベースに、独自のタスクやツールを追加して試してみてください。</p>
+
+  <!-- ===== 参考リンク ===== -->
+  <h2>参考リンク</h2>
+  <ul>
+    <li><a href="https://github.com/RobotecAI/rai" target="_blank">GitHub: RobotecAI/rai</a></li>
+    <li><a href="https://github.com/RobotecAI/rai-manipulation-demo" target="_blank">RAI Manipulation Demo</a></li>
+    <li><a href="https://robotecai.github.io/rai/" target="_blank">RAI公式ドキュメント</a></li>
+    <li><a href="https://arxiv.org/abs/2505.07532" target="_blank">arXiv: RAI: Flexible Agent Framework for Embodied AI (2505.07532)</a></li>
+    <li><a href="https://github.com/xArm-Developer/xarm_ros2" target="_blank">GitHub: xarm_ros2</a></li>
+    <li><a href="https://pypi.org/project/xarm-python-sdk/" target="_blank">xArm Python SDK (PyPI)</a></li>
+    <li><a href="https://discourse.openrobotics.org/t/ros-news-for-the-week-of-may-4th-2026/54641" target="_blank">ROS2 Kilted Kaiju / Open Robotics Discourse</a></li>
+    <li><a href="https://arxiv.org/html/2505.07532v1" target="_blank">RAI論文 arXiv (全文)</a></li>
+  </ul>
+
+</div>

@@ -1,0 +1,324 @@
+<!--
+  WIX EDITOR 貼り付け用 (note.comスタイル)
+  ==========================================
+  貼り付け方法:
+    Wix Editor → ブログ記事編集 → テキストエリア全選択 → 貼り付け
+    または "HTMLを追加" ブロックにそのまま貼り付け
+
+  GitHub リポジトリ: https://github.com/makotovnjp/RAI_demo
+-->
+
+<style>
+  .note-blog {
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    font-size: 16px;
+    line-height: 1.9;
+    color: #333;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
+  .note-blog h1 { font-size: 1.75rem; font-weight: 700; line-height: 1.4; margin-bottom: 12px; color: #111; }
+  .note-blog .eyecatch-meta { font-size: 0.82rem; color: #888; margin-bottom: 32px; border-bottom: 1px solid #eee; padding-bottom: 16px; }
+  .note-blog h2 { font-size: 1.3rem; font-weight: 700; margin-top: 52px; margin-bottom: 16px; color: #111; }
+  .note-blog h3 { font-size: 1.1rem; font-weight: 700; margin-top: 32px; margin-bottom: 10px; color: #222; }
+  .note-blog p { margin-bottom: 20px; }
+  .note-blog a { color: #1a8917; text-decoration: none; }
+  .note-blog a:hover { text-decoration: underline; }
+  .note-blog blockquote { border-left: 3px solid #ccc; margin: 24px 0; padding: 8px 20px; color: #555; font-style: italic; background: #f9f9f9; }
+  .note-blog pre { background: #f0f0f0; border-radius: 4px; padding: 18px; overflow-x: auto; font-size: 0.82rem; line-height: 1.65; margin: 20px 0; font-family: "SFMono-Regular", "Fira Code", Consolas, monospace; color: #222; }
+  .note-blog code { font-family: "SFMono-Regular", "Fira Code", Consolas, monospace; background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 0.88em; }
+  .note-blog ul, .note-blog ol { padding-left: 24px; margin-bottom: 20px; }
+  .note-blog li { margin-bottom: 8px; }
+  .note-blog .divider { border: none; border-top: 1px solid #eee; margin: 48px 0; }
+  .note-blog .tags { margin-top: 48px; font-size: 0.85rem; color: #555; }
+  .note-blog .tags span { display: inline-block; background: #f0f0f0; border-radius: 20px; padding: 3px 12px; margin: 4px 4px 4px 0; }
+  .note-blog .repo-box { background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 8px; padding: 16px 20px; margin: 24px 0; }
+  .note-blog .repo-box .repo-title { font-weight: 700; font-size: 1rem; margin-bottom: 6px; }
+  .note-blog .repo-box .repo-desc { font-size: 0.9rem; color: #555; margin: 0; }
+  .note-blog .file-tree { background: #1e1e1e; color: #d4d4d4; border-radius: 6px; padding: 16px 20px; font-family: monospace; font-size: 0.85rem; line-height: 1.8; margin: 20px 0; }
+  .note-blog .file-tree .dir { color: #9cdcfe; }
+  .note-blog .file-tree .file { color: #ce9178; }
+  .note-blog .file-tree .comment { color: #6a9955; }
+  .note-blog .video-container { background: #000; border-radius: 8px; overflow: hidden; margin: 24px 0; text-align: center; padding: 12px; }
+  .note-blog .video-container video { max-width: 100%; border-radius: 4px; }
+  .note-blog .code-explain { background: #fff8e1; border-left: 4px solid #ffc107; padding: 14px 18px; border-radius: 0 6px 6px 0; margin: 16px 0; font-size: 0.92rem; }
+</style>
+
+<div class="note-blog">
+
+<h1>ROS2最新動向とRAIフレームワーク — UFACTORY Lite 6でLLM自律操作を実現する</h1>
+
+<p class="eyecatch-meta">
+  2026年5月12日 &nbsp;·&nbsp; 約15分で読めます &nbsp;·&nbsp;
+  <a href="https://github.com/makotovnjp/RAI_demo" target="_blank">📂 GitHubリポジトリ</a>
+</p>
+
+<p>2025年5月にROS1（Noetic）が公式EOLを迎え、ロボット開発は完全にROS2へ移行しました。それと同時に、LLMやVLMをロボット制御に組み込む「Physical AI」の動きが急加速しています。</p>
+
+<p>今回は、ROS2の2026年最新動向を整理したうえで、LLMとROS2を統合するエージェントフレームワーク <strong>RAI（Robotec AI Framework）</strong> の使い方と、<strong>UFACTORY Lite 6</strong>（6軸卓上ロボットアーム）との連携サンプルを紹介します。全コード・デモ動画は下記GitHubリポジトリで公開しています。</p>
+
+<!-- GitHub リポジトリ -->
+<div class="repo-box">
+  <div class="repo-title">
+    <a href="https://github.com/makotovnjp/RAI_demo" target="_blank">
+      📦 makotovnjp/RAI_demo
+    </a>
+  </div>
+  <p class="repo-desc">RAI Framework × UFACTORY Lite 6 デモ — ROS2 Kilted Kaiju対応サンプルコード、3Dアニメーション動画、Wixブログ用HTML</p>
+</div>
+
+<hr class="divider">
+
+<h2>デモ動画</h2>
+
+<p>下記の動画はPythonのmatplotlibで生成した、UFACTORY Lite 6によるピック＆プレース動作の3Dシミュレーションです。</p>
+
+<!-- 動画 (GitHub の raw URL から参照) -->
+<div class="video-container">
+  <video controls width="640" poster="">
+    <source src="https://github.com/makotovnjp/RAI_demo/raw/main/rai_lite6_demo.mp4" type="video/mp4">
+    <!-- フォールバック: GitHubページへのリンク -->
+    <p>動画を再生できない場合は
+      <a href="https://github.com/makotovnjp/RAI_demo/blob/main/rai_lite6_demo.mp4" target="_blank">こちら</a>
+      からダウンロードしてください。
+    </p>
+  </video>
+</div>
+
+<p>動画は <a href="https://github.com/makotovnjp/RAI_demo/blob/main/generate_demo_video.py" target="_blank"><code>generate_demo_video.py</code></a>（matplotlib + ffmpeg）で生成。実機なしで実行可能です。</p>
+
+<hr class="divider">
+
+<h2>1. ROS2の最新動向（2026年）</h2>
+
+<h3>ROS2 Kilted Kaiju</h3>
+
+<p>2026年5月時点の最新LTS版は <strong>ROS2 Kilted Kaiju</strong>（サポート〜2026年11月）です。注目の更新点を挙げます。</p>
+
+<ul>
+  <li><strong>Zenoh対応の安定化</strong>：DDS通信の代替として ROS2-Zenoh Bridge が正式サポート。低レイテンシ・省帯域の環境（エッジロボット、車載など）で恩恵が大きい</li>
+  <li><strong>ros2_control の改善</strong>：ハードウェアインターフェースの抽象化が洗練され、産業用コントローラとの fieldbus 統合が容易に</li>
+  <li><strong>Nav2 / MoveIt 2 の成熟</strong>：Dynamic obstacle avoidance が Nav2 に標準搭載。MoveIt 2 では Pilz Industrial Motion Planner が完全統合され、ROS1 時代のギャップがほぼ解消</li>
+</ul>
+
+<h3>ROS1 EOL 後の世界</h3>
+
+<p>PAL Robotics は 2026年4月1日をもって ROS1 スタックへの修正・新機能追加を終了し、すべての開発を ROS2 に移行すると発表しました。</p>
+
+<blockquote>
+「2019〜2021年には ROS2 を実用化するのが難しかったエコシステムのギャップが、2026年にはほぼ解消された」<br>— Robotics and Automation News (2026/04)
+</blockquote>
+
+<p>行動設計では Behavior Tree（BT）ベースのアーキテクチャが主流となり、LLM/VLMによるタスクプランニングの統合が次の主戦場になっています。ROSCon 2026 はカナダ・トロントで開催予定で、Physical AI と Embodied AI がホットトピックです。</p>
+
+<hr class="divider">
+
+<h2>2. RAIフレームワークとは</h2>
+
+<p>RAI は <a href="https://github.com/RobotecAI/rai" target="_blank">Robotec.ai</a> が開発するオープンソースの Physical AI フレームワークです。「LLMにロボットの目と手を与える」ためのミドルウェア層と理解すると分かりやすいでしょう。</p>
+
+<blockquote>
+"RAI is a vendor agnostic agentic framework for Physical AI robotics, utilizing ROS 2 tools to perform complex actions, defined scenarios, free interface execution, log summaries, voice interaction and more."
+</blockquote>
+
+<p>2025年5月、arXiv に論文「<a href="https://arxiv.org/abs/2505.07532" target="_blank">RAI: Flexible Agent Framework for Embodied AI</a>」（arXiv:2505.07532）として発表されました。</p>
+
+<h3>3層アーキテクチャ</h3>
+
+<ul>
+  <li><strong>Agents</strong>：<code>run()</code> / <code>stop()</code> を実装する基本単位。ReAct アーキテクチャの LLM として動作し、OpenAI・Anthropic Claude・ローカル LLM（Ollama）に対応</li>
+  <li><strong>Connectors</strong>：センサーとアクチュエータの抽象化。ROS2 の topic / service / action を通じてロボットと通信する</li>
+  <li><strong>Tools</strong>：LLM の tool-calling で呼び出せる関数群。<code>@tool</code> デコレータで独自ツールを追加可能</li>
+</ul>
+
+<hr class="divider">
+
+<h2>3. リポジトリ構成とコード解説</h2>
+
+<p>今回のサンプルコードはすべて <a href="https://github.com/makotovnjp/RAI_demo" target="_blank">makotovnjp/RAI_demo</a> で公開しています。</p>
+
+<div class="file-tree">
+<span class="dir">RAI_demo/</span>
+├── <span class="file">rai_lite6_agent/</span>
+│   ├── <span class="file">rai_lite6_agent.py</span>      <span class="comment"># ★ メインエージェント</span>
+│   ├── <span class="file">pick_and_place_demo.py</span>  <span class="comment"># VLM統合ピック&プレース</span>
+│   └── <span class="file">requirements.txt</span>
+├── <span class="file">generate_demo_video.py</span>      <span class="comment"># ★ 動画生成スクリプト</span>
+├── <span class="file">rai_lite6_demo.mp4</span>           <span class="comment"># 生成済みデモ動画</span>
+├── <span class="file">wix_blog_note_style.html</span>    <span class="comment"># このブログ記事</span>
+└── <span class="file">video_script.md</span>             <span class="comment"># 動画撮影スクリプト</span>
+</div>
+
+<h3>① rai_lite6_agent.py — メインエージェント</h3>
+
+<p>
+  <a href="https://github.com/makotovnjp/RAI_demo/blob/main/rai_lite6_agent/rai_lite6_agent.py" target="_blank">
+    コードを GitHub で見る →
+  </a>
+</p>
+
+<p>RAIのReActパターンを実装したメインファイルです。3つのクラスで構成されています。</p>
+
+<p><strong>Lite6Connector（ROS2通信層）</strong>：<code>rclpy.node.Node</code> を継承し、<code>/ufactory/set_position</code> サービスでデカルト移動、<code>/ufactory/set_gripper_position</code> でグリッパー制御を行います。<code>_validate_pose()</code> で作業空間の範囲外への移動を事前チェックする安全機構も実装しています。</p>
+
+<pre><code># 使用例: ROS2サービスでLite6を制御
+connector = Lite6Connector()
+connector.initialize()  # Enable → Mode0 → State0
+ok, msg = connector.move_to_pose(Pose(x=300, y=0, z=200), speed=100.0)</code></pre>
+
+<div class="code-explain">
+  <strong>ポイント</strong>: <code>RAI_SIM=1</code> 環境変数を設定するとシミュレーションモードになり、実機なしで動作確認できます。
+</div>
+
+<p><strong>Lite6Tools（LLMツール定義層）</strong>：Anthropic の tool-calling 形式でロボット操作ツールを定義します。<code>get_tool_definitions()</code> が JSON スキーマを返し、<code>execute_tool()</code> がツール名と入力をディスパッチして実行します。</p>
+
+<pre><code># LLMがこのツールを自律選択して呼び出す
+tools = [
+    {"name": "move_to_pose",    # デカルト座標への移動
+     "name": "control_gripper", # グリッパー開閉
+     "name": "get_camera_image",# カメラ画像取得（VLM解析用）
+     "name": "get_joint_angles",# 関節角度読み取り
+     "name": "move_home",       # ホームポジションへ帰還
+     "name": "wait_seconds"}    # 待機
+]</code></pre>
+
+<p><strong>RAILite6Agent（LLMエージェント層）</strong>：Anthropic の <code>messages.create()</code> をReActループで繰り返し呼び出します。<code>tool_use</code> ブロックが返ってくる間はツールを実行して結果を会話履歴に追記し、<code>end_turn</code> で完了です。</p>
+
+<pre><code># ReActループの核心部分
+for _ in range(max_iterations):
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        system=SYSTEM_PROMPT,         # ロボット制御専用システムプロンプト
+        tools=tools.get_tool_definitions(),
+        messages=conversation_history,
+    )
+
+    if response.stop_reason == "end_turn":
+        return response.content[0].text  # タスク完了
+
+    # ツールを順番に実行して結果を会話に追加（→ 次のLLM判断へ）
+    for block in response.content:
+        if block.type == "tool_use":
+            result = tools.execute_tool(block.name, block.input)
+            conversation_history.append({"role": "user",
+                "content": [{"type": "tool_result", "tool_use_id": block.id,
+                              "content": result}]})</code></pre>
+
+<h3>② pick_and_place_demo.py — VLM統合デモ</h3>
+
+<p>
+  <a href="https://github.com/makotovnjp/RAI_demo/blob/main/rai_lite6_agent/pick_and_place_demo.py" target="_blank">
+    コードを GitHub で見る →
+  </a>
+</p>
+
+<p>カメラ画像を Claude claude-sonnet-4-6（VLM）に送り、写っている物体を JSON 形式で返させてから自律的にピック＆プレースを行うデモです。</p>
+
+<pre><code>def detect_objects_with_vlm(client, image):
+    """
+    VLMで画像から把持可能な物体を検出する
+    Returns: [{"name": "物体名", "image_position": "中央"}]
+    """
+    img_b64 = base64.standard_b64encode(
+        cv2.imencode(".jpg", image)[1]
+    ).decode("utf-8")
+
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        messages=[{"role": "user", "content": [
+            {"type": "image", "source": {"type": "base64",
+             "media_type": "image/jpeg", "data": img_b64}},
+            {"type": "text",
+             "text": '物体をJSON形式で列挙: {"objects": [...]}'},
+        ]}],
+    )
+    return json.loads(response.content[0].text)</code></pre>
+
+<div class="code-explain">
+  <strong>ポイント</strong>: 画像内の「左上・中央・右下」などのラベルを、あらかじめ定義したロボット座標テーブル（<code>IMAGE_POS_TO_ROBOT</code>）でmm単位に変換してツールに渡します。本格的な実装にはカメラキャリブレーション＋デプス情報が必要です。
+</div>
+
+<h3>③ generate_demo_video.py — 3Dアニメーション生成</h3>
+
+<p>
+  <a href="https://github.com/makotovnjp/RAI_demo/blob/main/generate_demo_video.py" target="_blank">
+    コードを GitHub で見る →
+  </a>
+</p>
+
+<p>実機なしでデモ動画を生成するスクリプトです。matplotlib の <code>FuncAnimation</code> でフレームごとにアームの姿勢を描画し、ffmpeg 経由で MP4 に書き出します。</p>
+
+<pre><code># 簡易逆運動学でTCP位置からアーム各関節位置を計算
+def compute_arm_segments(tcp_x, tcp_y, tcp_z):
+    waist = np.arctan2(tcp_y, tcp_x)  # ウェスト回転角
+    r = np.sqrt(tcp_x**2 + tcp_y**2) # 水平距離
+
+    # 2リンクIK (上腕200mm + 前腕314mm)
+    d = np.sqrt((r)**2 + (tcp_z - 243)**2)
+    elbow_angle = np.arccos(np.clip(
+        (d**2 - 200**2 - 314**2) / (2 * 200 * 314), -1, 1))
+
+    # ...各関節位置を返す
+    return [base, shoulder, elbow, wrist, tcp]</code></pre>
+
+<pre><code># ffmpegでMP4として保存
+writer = animation.FFMpegWriter(fps=30,
+    extra_args=["-vcodec", "libx264", "-crf", "20"])
+ani.save("rai_lite6_demo.mp4", writer=writer, dpi=120)</code></pre>
+
+<hr class="divider">
+
+<h2>4. クイックスタート</h2>
+
+<pre><code># リポジトリをクローン
+git clone https://github.com/makotovnjp/RAI_demo.git
+cd RAI_demo
+
+# 依存パッケージインストール
+pip install -r rai_lite6_agent/requirements.txt
+
+# APIキー設定
+export ANTHROPIC_API_KEY=your-key-here
+
+# デモ動画を生成
+python generate_demo_video.py
+# → rai_lite6_demo.mp4 が生成されます
+
+# エージェントを実行（シミュレーションモード）
+RAI_SIM=1 python rai_lite6_agent/rai_lite6_agent.py</code></pre>
+
+<hr class="divider">
+
+<h2>まとめ</h2>
+
+<p>ROS2 が産業用ロボット開発のデファクトスタンダードとなった 2026年において、RAI フレームワークは「LLM を使って ROS2 ロボットを自然言語制御する」ための現実的な選択肢です。</p>
+
+<p><code>Connectors</code> と <code>Tools</code> の抽象化設計により、ハードウェアが変わっても LLM 側のコードをほとんど変えずに対応できる点が大きなメリットです。UFACTORY Lite 6 から大型マニピュレータまで同じパターンで統合できます。</p>
+
+<p>サンプルコードと生成動画はすべて <a href="https://github.com/makotovnjp/RAI_demo" target="_blank">makotovnjp/RAI_demo</a> で公開しています。Star・フォークお待ちしています！</p>
+
+<h2>参考リンク</h2>
+<ul>
+  <li><a href="https://github.com/makotovnjp/RAI_demo" target="_blank">makotovnjp/RAI_demo (本記事のコード)</a></li>
+  <li><a href="https://github.com/RobotecAI/rai" target="_blank">RAI Framework (GitHub)</a></li>
+  <li><a href="https://arxiv.org/abs/2505.07532" target="_blank">RAI 論文 (arXiv:2505.07532)</a></li>
+  <li><a href="https://github.com/RobotecAI/rai-manipulation-demo" target="_blank">RAI Manipulation Demo</a></li>
+  <li><a href="https://github.com/xArm-Developer/xarm_ros2" target="_blank">xarm_ros2 (GitHub)</a></li>
+  <li><a href="https://robotecai.github.io/rai/" target="_blank">RAI 公式ドキュメント</a></li>
+</ul>
+
+<div class="tags">
+  <span>#ROS2</span>
+  <span>#RAI</span>
+  <span>#フィジカルAI</span>
+  <span>#EmbodiedAI</span>
+  <span>#ロボットアーム</span>
+  <span>#UFACTORY</span>
+  <span>#LLM</span>
+  <span>#Claude</span>
+  <span>#自律ロボット</span>
+  <span>#GitHub</span>
+</div>
+
+</div>
