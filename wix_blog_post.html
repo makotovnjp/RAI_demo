@@ -50,7 +50,7 @@
     2️⃣ RAIフレームワークの概要と使い方<br>
     3️⃣ RAIの実際の適用事例<br>
     4️⃣ RAI × UFACTORY Lite 6 実装サンプル<br>
-    5️⃣ 反論：RAIはまだ研究レベル？現場導入の現実
+    5️⃣ AI はまだ研究レベル？現場導入の現実
   </div>
 
   <!-- ===== セクション1 ===== -->
@@ -281,13 +281,27 @@ RAI_DEMO=1 python3 rai_lite6_agent.py</code></pre>
   <!-- ===== セクション7 ===== -->
   <h2>7. デモ動画の内容</h2>
 
+  <p>
+    <video controls width="100%" style="border-radius:8px; margin-bottom:12px;">
+      <source src="https://github.com/makotovnjp/RAI_demo/raw/main/rai_lite6_demo.mp4" type="video/mp4">
+      お使いのブラウザは video タグに対応していません。
+      <a href="https://github.com/makotovnjp/RAI_demo/raw/main/rai_lite6_demo.mp4" target="_blank">動画をダウンロード</a>
+    </video>
+    <small style="color:#666;">
+      動画が再生されない場合は
+      <a href="https://github.com/makotovnjp/RAI_demo/raw/main/rai_lite6_demo.mp4" target="_blank">こちら</a>
+      からダウンロードしてください。
+    </small>
+  </p>
+
   <table>
     <tr><th>時間</th><th>シナリオ</th><th>内容</th></tr>
-    <tr><td>0:00〜1:00</td><td>イントロ＆構成説明</td><td>アーキテクチャ図解説</td></tr>
-    <tr><td>1:00〜2:00</td><td>基本操作</td><td>「ホームに移動して」等の自然言語コマンド</td></tr>
-    <tr><td>2:00〜3:30</td><td>VLM + ピック＆プレース</td><td>カメラ画像→物体認識→把持→移送</td></tr>
-    <tr><td>3:30〜4:30</td><td>自律マルチタスク</td><td>複数物体を自動分類・配置</td></tr>
-    <tr><td>4:30〜5:00</td><td>まとめ</td><td>GitHub・参考リンク紹介</td></tr>
+    <tr><td>0:00〜0:05</td><td>システム初期化</td><td>RAIエージェント起動・カメラ画像取得</td></tr>
+    <tr><td>0:05〜0:11</td><td>タスク計画</td><td>LLMが7ステップの実行計画を生成</td></tr>
+    <tr><td>0:11〜0:16</td><td>アプローチ・降下</td><td>アームが物体上方へ移動、把持高さへ降下</td></tr>
+    <tr><td>0:16〜0:22</td><td>把持・持ち上げ</td><td>グリッパーを閉じて物体を把持、搬送高さへ上昇</td></tr>
+    <tr><td>0:22〜0:27</td><td>移送・配置</td><td>ドロップゾーンへ旋回し配置位置へ降下</td></tr>
+    <tr><td>0:27〜0:30</td><td>解放・帰還</td><td>グリッパー開放、ホームポジションへ帰還</td></tr>
   </table>
 
   <!-- ===== セクション8 ===== -->
@@ -306,9 +320,9 @@ RAI_DEMO=1 python3 rai_lite6_agent.py</code></pre>
   </div>
 
   <!-- ===== 反論セクション ===== -->
-  <h2>8. 反論：RAIはまだ研究レベル — 実現場への導入はまだできない</h2>
+  <h2>8. AIはまだ研究レベル — 実現場への導入はまだ難しい</h2>
 
-  <p>ここまでRAIの可能性を紹介してきましたが、「<strong>現時点では実の現場（商用ライン）への本格導入はまだ難しい</strong>」という反論は正当です。その根拠と、それでもなお価値がある理由を整理します。</p>
+  <p>ここまでRAIの可能性を紹介してきましたが、「<strong>現時点ではAI・LLMベースのロボット制御を実の現場（商用ライン）へ本格導入するのはまだ難しい</strong>」という反論は正当です。その根拠と、それでもなお価値がある理由を整理します。</p>
 
   <h3>現場導入を阻む5つの壁</h3>
 
