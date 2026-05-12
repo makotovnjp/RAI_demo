@@ -281,31 +281,200 @@ def transform_mesh(tris_mm: np.ndarray, T_m: np.ndarray) -> np.ndarray:
 #
 # 各キーフレーム: (q1,q2,q3,q4,q5,q6, gripper_open, label)
 
+# 12 キーフレーム: [0] Startup, [1] Planning, [2-9] 動作, [10] Home, [11] Complete
 KEYFRAMES = [
-    # ホームポジション
-    ( 0.0,  -0.8,  1.4,  0.0,  0.8,  0.0,  0.4,  "ホームポジション"),
-    # アプローチ (物体の上方)
-    ( 0.0,  -0.3,  1.2,  0.0,  0.5,  0.0,  1.0,  "アプローチ\nグリッパー開"),
-    # 把持高さへ降下  → q2-q6 はこのセクションの基準
-    ( 0.0,   0.1,  1.0,  0.0,  0.2,  0.0,  1.0,  "降下\n把持準備"),
-    # 把持
-    ( 0.0,   0.1,  1.0,  0.0,  0.2,  0.0,  0.1,  "把持完了\nグリッパー閉"),
-    # 持ち上げ
-    ( 0.0,  -0.3,  1.2,  0.0,  0.5,  0.0,  0.1,  "持ち上げ"),
-    # ドロップゾーンへ移動 (q1 で旋回、q2-q6 はピックと同じ高さ)
-    ( 0.9,  -0.3,  1.2,  0.0,  0.5,  0.0,  0.1,  "ドロップゾーンへ移動"),
-    # ドロップ降下 — q2-q6 をピックと揃えて同じ高さに降下
-    ( 0.9,   0.1,  1.0,  0.0,  0.2,  0.0,  0.1,  "配置位置へ降下"),
-    # 解放
-    ( 0.9,   0.1,  1.0,  0.0,  0.2,  0.0,  1.0,  "物体を解放\nグリッパー開"),
-    # 引き上げ
-    ( 0.9,  -0.3,  1.2,  0.0,  0.5,  0.0,  1.0,  "引き上げ"),
-    # ホームへ帰還
-    ( 0.0,  -0.8,  1.4,  0.0,  0.8,  0.0,  0.4,  "ホームへ帰還"),
+    ( 0.0,  -0.8,  1.4,  0.0,  0.8,  0.0,  0.4,  ""),  # 0 Startup
+    ( 0.0,  -0.8,  1.4,  0.0,  0.8,  0.0,  0.4,  ""),  # 1 Planning (same pos)
+    ( 0.0,  -0.3,  1.2,  0.0,  0.5,  0.0,  1.0,  ""),  # 2 Approach
+    ( 0.0,   0.1,  1.0,  0.0,  0.2,  0.0,  1.0,  ""),  # 3 Descend
+    ( 0.0,   0.1,  1.0,  0.0,  0.2,  0.0,  0.1,  ""),  # 4 Grasp  ← pick_frame
+    ( 0.0,  -0.3,  1.2,  0.0,  0.5,  0.0,  0.1,  ""),  # 5 Lift
+    ( 0.9,  -0.3,  1.2,  0.0,  0.5,  0.0,  0.1,  ""),  # 6 Transport
+    ( 0.9,   0.1,  1.0,  0.0,  0.2,  0.0,  0.1,  ""),  # 7 Lower
+    ( 0.9,   0.1,  1.0,  0.0,  0.2,  0.0,  1.0,  ""),  # 8 Release ← drop_frame
+    ( 0.9,  -0.3,  1.2,  0.0,  0.5,  0.0,  1.0,  ""),  # 9 Retract
+    ( 0.0,  -0.8,  1.4,  0.0,  0.8,  0.0,  0.4,  ""),  # 10 Home
+    ( 0.0,  -0.8,  1.4,  0.0,  0.8,  0.0,  0.4,  ""),  # 11 Complete (static)
 ]
 
-FRAMES_PER_SEG = 20   # キーフレーム間の補間フレーム数
+FRAMES_PER_SEG = 40   # キーフレーム間の補間フレーム数 (40×11+1 = 441 frames ≈ 29s)
 FPS = 15              # 出力フレームレート
+
+# ── LLM/タスク ナレーティブ (セグメントごと) ──────────────────────────────────
+# 各エントリ: task, think, tool, result
+PHASE_DATA = [
+    # seg 0: Startup
+    dict(
+        task="[INIT] System Online",
+        think="Initializing RAI agent...\n"
+              "  ROS2 node: connected\n"
+              "  Camera feed: active\n"
+              "  Robot arm: ready\n\n"
+              "Waiting for task...",
+        tool='get_camera_image({})',
+        result='  -> 1280x720px captured\n'
+               '  -> Scene analysis: OK',
+    ),
+    # seg 1: Planning
+    dict(
+        task="[PLAN] Generating Plan",
+        think='Task received:\n'
+              '  "Pick red block, move right"\n\n'
+              'VLM: red block detected at\n'
+              '  approx (293, 0) mm\n\n'
+              'Execution plan:\n'
+              '  1. move_to_pose (approach)\n'
+              '  2. move_to_pose (descend)\n'
+              '  3. control_gripper (close)\n'
+              '  4. move_to_pose (lift)\n'
+              '  5. move_to_pose (transport)\n'
+              '  6. move_to_pose (lower)\n'
+              '  7. control_gripper (open)',
+        tool='move_home({})',
+        result='  -> TCP: (51, 0, 577) mm\n'
+               '  -> Status: OK',
+    ),
+    # seg 2: Approach
+    dict(
+        task="[EXEC] 1/7  Approach",
+        think='Moving to approach position\n'
+              'above the red block.\n\n'
+              'Target approach height:\n'
+              '  z = 472 mm\n'
+              'Gripper: OPEN (1.0)',
+        tool='move_to_pose({\n'
+             '  "x": 227, "y": 0,\n'
+             '  "z": 472, "speed": 150\n'
+             '})\n'
+             'control_gripper({"position": 1.0})',
+        result='  -> TCP: (227, 0, 472) mm\n'
+               '  -> Gripper: open\n'
+               '  -> OK',
+    ),
+    # seg 3: Descend
+    dict(
+        task="[EXEC] 2/7  Descend",
+        think='Descending slowly to\n'
+              'grasp height.\n\n'
+              'Grasp z: 322 mm\n'
+              'Speed: reduced to 80\n'
+              'Gripper stays OPEN',
+        tool='move_to_pose({\n'
+             '  "x": 293, "y": 0,\n'
+             '  "z": 322, "speed": 80\n'
+             '})',
+        result='  -> TCP: (293, 0, 322) mm\n'
+               '  -> At grasp position\n'
+               '  -> OK',
+    ),
+    # seg 4: Grasp
+    dict(
+        task="[EXEC] 3/7  Grasp",
+        think='Object in gripper range!\n\n'
+              'Closing gripper to\n'
+              'secure the block.\n\n'
+              'Target position: 0.1\n'
+              '(10% = fully closed)',
+        tool='control_gripper({\n'
+             '  "position": 0.1\n'
+             '})',
+        result='  -> Gripper: CLOSED\n'
+               '  -> Object secured\n'
+               '  -> OK',
+    ),
+    # seg 5: Lift
+    dict(
+        task="[EXEC] 4/7  Lift",
+        think='Object grasped.\n'
+              'Lifting to safe\n'
+              'transport height.\n\n'
+              'Target z: 472 mm\n'
+              'Carrying: red block',
+        tool='move_to_pose({\n'
+             '  "x": 227, "y": 0,\n'
+             '  "z": 472, "speed": 120\n'
+             '})',
+        result='  -> TCP: (227, 0, 472) mm\n'
+               '  -> Carrying object\n'
+               '  -> OK',
+    ),
+    # seg 6: Transport
+    dict(
+        task="[EXEC] 5/7  Transport",
+        think='Moving to drop zone.\n\n'
+              'Rotating joint 1:\n'
+              '  +51.6 deg\n\n'
+              'Drop target:\n'
+              '  (182, 229) mm',
+        tool='move_to_pose({\n'
+             '  "x": 141, "y": 177,\n'
+             '  "z": 472, "speed": 150\n'
+             '})',
+        result='  -> TCP: (141,177,472)mm\n'
+               '  -> At drop zone\n'
+               '  -> OK',
+    ),
+    # seg 7: Lower
+    dict(
+        task="[EXEC] 6/7  Lower",
+        think='Arrived at drop zone.\n'
+              'Lowering to place\n'
+              'position.\n\n'
+              'Place z: 322 mm\n'
+              '(same height as pick)',
+        tool='move_to_pose({\n'
+             '  "x": 182, "y": 229,\n'
+             '  "z": 322, "speed": 80\n'
+             '})',
+        result='  -> TCP: (182,229,322)mm\n'
+               '  -> At place position\n'
+               '  -> OK',
+    ),
+    # seg 8: Release
+    dict(
+        task="[EXEC] 7/7  Release",
+        think='Object at destination.\n\n'
+              'Opening gripper to\n'
+              'release the block.\n\n'
+              'Target position: 1.0\n'
+              '(100% = fully open)',
+        tool='control_gripper({\n'
+             '  "position": 1.0\n'
+             '})',
+        result='  -> Gripper: OPEN\n'
+               '  -> Object placed\n'
+               '  -> OK',
+    ),
+    # seg 9: Retract
+    dict(
+        task="[DONE] Retracting",
+        think='All steps complete!\n\n'
+              'Retracting arm to\n'
+              'safe height before\n'
+              'returning to home.',
+        tool='move_to_pose({\n'
+             '  "x": 141, "y": 177,\n'
+             '  "z": 472, "speed": 120\n'
+             '})',
+        result='  -> Arm retracted\n'
+               '  -> OK',
+    ),
+    # seg 10: Return Home
+    dict(
+        task="[DONE] Return Home",
+        think='Returning to home.\n\n'
+              'Task summary:\n'
+              '  Object: red block\n'
+              '  Picked: (293,0,302)mm\n'
+              '  Placed: (182,229,302)mm\n'
+              '  Tools used: 8 calls\n'
+              '  Status: SUCCESS',
+        tool='move_home({})',
+        result='  -> TCP: (51, 0, 577) mm\n'
+               '  -> Home position\n'
+               '  -> Task COMPLETE',
+    ),
+]
 
 
 def smooth_step(t: float) -> float:
@@ -383,18 +552,17 @@ def create_animation(meshes: Dict[str, np.ndarray]):
     ax.view_init(elev=22, azim=-40)
 
     # FK から実際の把持/解放 TCP 位置を計算 (z は投影しない)
-    _Ts_grasp = forward_kinematics(list(KEYFRAMES[3][:6]))
-    pick_pos  = _Ts_grasp[-1][:3, 3] * 1000.0          # (mm) 実際の TCP 位置
+    _Ts_grasp = forward_kinematics(list(KEYFRAMES[4][:6]))   # KF[4] = Grasp
+    pick_pos  = _Ts_grasp[-1][:3, 3] * 1000.0
 
-    _Ts_drop = forward_kinematics(list(KEYFRAMES[7][:6]))
-    drop_pos  = _Ts_drop[-1][:3, 3] * 1000.0           # (mm) 実際の TCP 位置
+    _Ts_drop = forward_kinematics(list(KEYFRAMES[8][:6]))    # KF[8] = Release
+    drop_pos  = _Ts_drop[-1][:3, 3] * 1000.0
 
-    # 作業面高さ = 把持 TCP z - ブロック半高さ (20mm 想定)
     BLOCK_HALF = 20.0
     work_z = pick_pos[2] - BLOCK_HALF
 
-    pick_frame = FRAMES_PER_SEG * 3   # KF[3] = 把持完了
-    drop_frame = FRAMES_PER_SEG * 7   # KF[7] = 解放
+    pick_frame = FRAMES_PER_SEG * 4   # KF[4] = Grasp
+    drop_frame = FRAMES_PER_SEG * 8   # KF[8] = Release
 
     # 作業台 (work_z の高さに描画)
     _tx = np.array([ 50, 480, 480,  50,  50])
@@ -452,61 +620,97 @@ def create_animation(meshes: Dict[str, np.ndarray]):
                           linestyle="--", zorder=3)
     trail_x, trail_y, trail_z = [], [], []
 
-    # ── 右側情報パネル ───────────────────────────────────────────────
-    ax_info = fig.add_axes([0.63, 0.05, 0.36, 0.88])
-    ax_info.set_facecolor("#09152a")
+    # ── 右側情報パネル (4ゾーン) ─────────────────────────────────────
+    ax_info = fig.add_axes([0.61, 0.01, 0.38, 0.96])
+    ax_info.set_facecolor("#060e1a")
     ax_info.set_xlim(0, 1)
     ax_info.set_ylim(0, 1)
     ax_info.axis("off")
 
-    # パネルヘッダー
-    ax_info.text(0.5, 0.97, "RAI Agent Log",
+    # ── ヘッダー ────────────────────────────────────────────────────
+    ax_info.text(0.5, 0.977, "RAI Agent",
                  ha="center", va="top", color="#ffffff",
                  fontsize=11, fontweight="bold", fontfamily="monospace")
-    ax_info.plot([0.02, 0.98], [0.93, 0.93], color="#2255aa", lw=1.2)
+    ax_info.plot([0.02, 0.98], [0.955, 0.955], color="#1a3a6a", lw=1.5)
 
-    # ツールログ — 明るい白で高コントラスト
-    log_text = ax_info.text(0.05, 0.90, "", ha="left", va="top",
-                             color="#ffffff", fontsize=8.5, linespacing=1.75,
-                             fontfamily="monospace")
+    # ── Zone 1: User command (静的) ─────────────────────────────────
+    ax_info.text(0.04, 0.948, "[User]",
+                 ha="left", va="top", color="#55aaff",
+                 fontsize=8, fontweight="bold", fontfamily="monospace")
+    ax_info.text(0.04, 0.924,
+                 'Pick the red block and\nplace it on the right.',
+                 ha="left", va="top", color="#88ccff",
+                 fontsize=8.5, fontfamily="monospace", linespacing=1.5,
+                 bbox=dict(boxstyle="square,pad=0.3", facecolor="#0a1e3a",
+                           edgecolor="#1a3a6a", linewidth=1))
+    ax_info.plot([0.02, 0.98], [0.860, 0.860], color="#1a3a6a", lw=0.8)
 
-    # タスクラベル — 黄色で視認性強調
-    task_label = ax_info.text(0.5, 0.28, "", ha="center", va="center",
-                               color="#ffe566", fontsize=12, fontweight="bold",
-                               bbox=dict(boxstyle="round,pad=0.55",
+    # ── Zone 2: Agent thinking ───────────────────────────────────────
+    ax_info.text(0.04, 0.852, "[Agent Thinking]",
+                 ha="left", va="top", color="#ffd700",
+                 fontsize=8, fontweight="bold", fontfamily="monospace")
+    think_text = ax_info.text(0.04, 0.828, "",
+                               ha="left", va="top", color="#ffffff",
+                               fontsize=7.8, fontfamily="monospace",
+                               linespacing=1.65,
+                               bbox=dict(boxstyle="square,pad=0.35",
+                                         facecolor="#0c1a2e",
+                                         edgecolor="#2a4a1a", linewidth=1,
+                                         alpha=1.0))
+    ax_info.plot([0.02, 0.98], [0.560, 0.560], color="#1a3a6a", lw=0.8)
+
+    # ── Zone 3: Tool execution ───────────────────────────────────────
+    ax_info.text(0.04, 0.552, "[Tool Execution]",
+                 ha="left", va="top", color="#ff9944",
+                 fontsize=8, fontweight="bold", fontfamily="monospace")
+    tool_text = ax_info.text(0.04, 0.528, "",
+                              ha="left", va="top", color="#aaffaa",
+                              fontsize=7.8, fontfamily="monospace",
+                              linespacing=1.65,
+                              bbox=dict(boxstyle="square,pad=0.35",
+                                        facecolor="#0c1a0c",
+                                        edgecolor="#1a4a1a", linewidth=1,
+                                        alpha=1.0))
+    ax_info.plot([0.02, 0.98], [0.330, 0.330], color="#1a3a6a", lw=0.8)
+
+    # ── Zone 4: Task status ──────────────────────────────────────────
+    task_label = ax_info.text(0.5, 0.308, "",
+                               ha="center", va="top",
+                               color="#ffe566", fontsize=10,
+                               fontweight="bold", fontfamily="monospace",
+                               bbox=dict(boxstyle="round,pad=0.45",
                                          facecolor="#0d1f3c",
                                          edgecolor="#ff6b35", linewidth=2.5))
 
-    # 進捗バー
-    ax_info.text(0.05, 0.135, "Progress:", ha="left", va="center",
-                 color="#aaccee", fontsize=8, fontfamily="monospace")
-    ax_info.plot([0.05, 0.95], [0.105, 0.105], color="#1a2d50", lw=14,
-                 solid_capstyle="butt")
-    prog_bar, = ax_info.plot([0.05, 0.05], [0.105, 0.105], color="#ff6b35",
-                              lw=14, solid_capstyle="butt")
-
-    # 関節角度テキスト — 白文字 + 濃い背景ボックスで確実に視認
-    joint_text = ax_info.text(0.05, 0.60, "", ha="left", va="top",
-                               color="#ffffff", fontsize=9.0,
-                               fontfamily="monospace", linespacing=1.8,
-                               bbox=dict(boxstyle="square,pad=0.45",
+    # 関節角度 (ボックス付き白文字)
+    joint_text = ax_info.text(0.04, 0.230, "",
+                               ha="left", va="top",
+                               color="#ffffff", fontsize=7.8,
+                               fontfamily="monospace", linespacing=1.65,
+                               bbox=dict(boxstyle="square,pad=0.35",
                                          facecolor="#0a1a30",
-                                         edgecolor="#2255aa",
-                                         linewidth=1.2,
+                                         edgecolor="#2255aa", linewidth=1,
                                          alpha=1.0))
 
-    # フレームカウンター
-    frame_ctr = ax_info.text(0.95, 0.04, "", ha="right", va="bottom",
-                               color="#7799bb", fontsize=7.5,
-                               fontfamily="monospace")
+    # 進捗バー
+    ax_info.text(0.04, 0.088, "Progress:",
+                 ha="left", va="center",
+                 color="#aaccee", fontsize=8, fontfamily="monospace")
+    ax_info.plot([0.04, 0.96], [0.065, 0.065], color="#1a2d50", lw=12,
+                 solid_capstyle="butt")
+    prog_bar, = ax_info.plot([0.04, 0.04], [0.065, 0.065], color="#ff6b35",
+                              lw=12, solid_capstyle="butt")
 
-    LOG_LINES: List[str] = []
+    frame_ctr = ax_info.text(0.96, 0.022, "",
+                              ha="right", va="bottom",
+                              color="#7799bb", fontsize=7.5,
+                              fontfamily="monospace")
 
     # ── アップデート関数 ────────────────────────────────────────────
     def update(fi: int):
-        nonlocal trail_x, trail_y, trail_z, LOG_LINES
+        nonlocal trail_x, trail_y, trail_z
 
-        q, grip, label = frames[fi]
+        q, grip, _ = frames[fi]
         Ts = forward_kinematics(q)
 
         # メッシュを更新 (ジオメトリのみ、フェース色はローカル空間で固定)
@@ -555,43 +759,41 @@ def create_animation(meshes: Dict[str, np.ndarray]):
         tcp_trail.set_data(trail_x, trail_y)
         tcp_trail.set_3d_properties(trail_z)
 
-        # ログ更新
-        seg = fi // FRAMES_PER_SEG
-        prog = fi / FRAMES_PER_SEG - seg
-        if seg < len(KEYFRAMES) - 1:
-            log = (
-                f"[Tool ->] move_to_pose\n"
-                f"  q=[{', '.join(f'{np.degrees(a):.0f}' for a in q)}]deg\n"
-                f"  TCP=({tcp[0]:.0f}, {tcp[1]:.0f}, {tcp[2]:.0f}) mm\n"
-                f"[<- Tool] done {prog*100:.0f}%\n"
-                f"\n"
-                f"[Tool ->] control_gripper\n"
-                f"  position={grip:.2f}\n"
-            )
-            if not LOG_LINES or LOG_LINES[-1] != log:
-                LOG_LINES.append(log)
-                if len(LOG_LINES) > 3:
-                    LOG_LINES = LOG_LINES[-3:]
+        # ── LLM ナレーティブ更新 ──────────────────────────────────────
+        seg = min(fi // FRAMES_PER_SEG, len(PHASE_DATA) - 1)
+        t_in_seg = (fi % FRAMES_PER_SEG) / max(FRAMES_PER_SEG - 1, 1)
+        phase = PHASE_DATA[seg]
 
-        log_text.set_text("\n".join(LOG_LINES))
-        task_label.set_text(label)
+        # Agent thinking: セグメント前半で行を逐次表示
+        think_lines = phase["think"].split("\n")
+        n_show = max(1, int(len(think_lines) * min(1.0, t_in_seg * 2.2)))
+        think_text.set_text("\n".join(think_lines[:n_show]))
 
-        # 関節角度表示 (ASCII only — glyph fallback 回避)
+        # Tool execution: 前半=コール表示, 後半=結果追加
+        if t_in_seg < 0.50:
+            tool_text.set_text(phase["tool"])
+        else:
+            tool_text.set_text(phase["tool"] + "\n" + phase["result"])
+
+        task_label.set_text(phase["task"])
+
+        # 関節角度 (ASCII only)
         joint_text.set_text(
             "Joint Angles:\n" +
-            "\n".join(f"  J{i+1}: {np.degrees(a):+7.1f} deg" for i, a in enumerate(q))
+            "\n".join(f"  J{i+1}: {np.degrees(a):+7.1f} deg"
+                      for i, a in enumerate(q))
         )
 
         # プログレスバー
         p = (fi + 1) / total
-        prog_bar.set_xdata([0.05, 0.05 + 0.90 * p])
-        prog_bar.set_ydata([0.105, 0.105])
+        prog_bar.set_xdata([0.04, 0.04 + 0.92 * p])
+        prog_bar.set_ydata([0.065, 0.065])
 
         frame_ctr.set_text(f"{fi/FPS:.1f}s / {total/FPS:.1f}s")
 
         return (link_collections + [joint_scatter, grip_L, grip_R,
-                obj_scatter, tcp_trail, log_text, task_label,
-                joint_text, prog_bar, frame_ctr])
+                obj_scatter, tcp_trail, think_text, tool_text,
+                task_label, joint_text, prog_bar, frame_ctr])
 
     ani = animation.FuncAnimation(
         fig, update, frames=total,
