@@ -1,70 +1,46 @@
-# ROS2 × RAI × UFACTORY Lite 6 — 成果物一覧
+# RAI × UFACTORY Lite 6 Demo
+
+RAI Framework + ROS2 + UFACTORY Lite 6 による自然言語ロボット自律操作デモ
 
 ## ファイル構成
 
 ```
-ros2_rai_ufactory/
-├── README.md                         ← このファイル
-│
-├── wix_blog_note_style.html          ← ★ Wix貼り付け用ブログ（note.comスタイル）
-├── wix_blog_post.html                ← Wix貼り付け用ブログ（リッチスタイル版）
-├── blog_ros2_rai_ufactory.md         ← ブログ全文（Markdown版）
-│
-├── video_script.md                   ← 動画録画スクリプト・YouTube説明文
-│
-└── rai_lite6_agent/
-    ├── rai_lite6_agent.py            ← ★ メインエージェント（実行エントリポイント）
-    ├── pick_and_place_demo.py        ← VLM統合ピック＆プレースデモ
-    └── requirements.txt              ← pip依存パッケージ
+RAI_demo/
+├── README.md
+├── rai_lite6_agent/
+│   ├── rai_lite6_agent.py        ← ★ メインエージェント
+│   ├── pick_and_place_demo.py    ← VLM統合ピック＆プレース
+│   └── requirements.txt
+├── generate_demo_video.py        ← ★ 3Dアニメ → MP4生成
+├── rai_lite6_demo.mp4            ← 生成済みデモ動画
+├── wix_blog_note_style.html      ← Wixブログ記事（note.comスタイル）
+├── wix_blog_post.html            ← Wixブログ記事（リッチ版）
+├── blog_ros2_rai_ufactory.md     ← ブログ全文（Markdown）
+└── video_script.md               ← 動画撮影スクリプト
 ```
 
-## Wixへの貼り付け手順
-
-1. `wix_blog_note_style.html` をテキストエディタで開く
-2. 全文コピー（Ctrl+A → Ctrl+C）
-3. Wix Editor → ブログ記事編集画面を開く
-4. テキストブロックの「+」→「HTMLを埋め込む」を選択
-5. 貼り付け（Ctrl+V）→ 適用
-
-## サンプルコード実行手順
+## クイックスタート
 
 ```bash
-# 環境構築
-pip install -r rai_lite6_agent/requirements.txt
+git clone https://github.com/makotovnjp/RAI_demo.git
+cd RAI_demo
 
-# APIキー設定
+pip install -r rai_lite6_agent/requirements.txt
 export ANTHROPIC_API_KEY=your-key-here
 
-# シミュレーションモード（実機なしで動作確認）
-RAI_SIM=1 python3 rai_lite6_agent/rai_lite6_agent.py
+# デモ動画を生成
+python generate_demo_video.py
 
-# 実機モード（Lite6のIPを指定してドライバ起動後）
-ros2 launch xarm_api lite6_driver.launch.py robot_ip:=192.168.1.xxx
-python3 rai_lite6_agent/rai_lite6_agent.py
-
-# デモシナリオ自動実行
-RAI_DEMO=1 RAI_SIM=1 python3 rai_lite6_agent/rai_lite6_agent.py
-
-# VLM統合ピック＆プレース
-RAI_SIM=1 python3 rai_lite6_agent/pick_and_place_demo.py
+# エージェント起動（シミュレーションモード）
+RAI_SIM=1 python rai_lite6_agent/rai_lite6_agent.py
 ```
-
-## 動画撮影について
-
-`video_script.md` に以下が含まれています：
-- シーン構成（5シーン・約5分）
-- 各シーンのナレーション・テロップ案
-- 録画設定チェックリスト
-- YouTube動画説明文（コピペ用）
-- 編集メモ
 
 ## 参考リンク
 
 | リソース | URL |
 |---------|-----|
-| RAI GitHub | https://github.com/RobotecAI/rai |
-| RAI 論文 | https://arxiv.org/abs/2505.07532 |
+| RAI Framework | https://github.com/RobotecAI/rai |
+| RAI 論文 (arXiv) | https://arxiv.org/abs/2505.07532 |
 | RAI ドキュメント | https://robotecai.github.io/rai/ |
-| RAI Manipulation Demo | https://github.com/RobotecAI/rai-manipulation-demo |
 | xarm_ros2 | https://github.com/xArm-Developer/xarm_ros2 |
 | xArm Python SDK | https://pypi.org/project/xarm-python-sdk/ |
