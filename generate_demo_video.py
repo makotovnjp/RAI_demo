@@ -267,18 +267,18 @@ KEYFRAMES = [
     ( 0.0,  -0.8,  1.4,  0.0,  0.8,  0.0,  0.4,  "ホームポジション"),
     # アプローチ (物体の上方)
     ( 0.0,  -0.3,  1.2,  0.0,  0.5,  0.0,  1.0,  "アプローチ\nグリッパー開"),
-    # 把持高さへ降下
+    # 把持高さへ降下  → q2-q6 はこのセクションの基準
     ( 0.0,   0.1,  1.0,  0.0,  0.2,  0.0,  1.0,  "降下\n把持準備"),
     # 把持
     ( 0.0,   0.1,  1.0,  0.0,  0.2,  0.0,  0.1,  "把持完了\nグリッパー閉"),
     # 持ち上げ
     ( 0.0,  -0.3,  1.2,  0.0,  0.5,  0.0,  0.1,  "持ち上げ"),
-    # ドロップゾーンへ移動 (yaw 方向に旋回)
+    # ドロップゾーンへ移動 (q1 で旋回、q2-q6 はピックと同じ高さ)
     ( 0.9,  -0.3,  1.2,  0.0,  0.5,  0.0,  0.1,  "ドロップゾーンへ移動"),
-    # ドロップ降下
-    ( 0.9,   0.0,  1.1,  0.0,  0.3,  0.0,  0.1,  "配置位置へ降下"),
+    # ドロップ降下 — q2-q6 をピックと揃えて同じ高さに降下
+    ( 0.9,   0.1,  1.0,  0.0,  0.2,  0.0,  0.1,  "配置位置へ降下"),
     # 解放
-    ( 0.9,   0.0,  1.1,  0.0,  0.3,  0.0,  1.0,  "物体を解放\nグリッパー開"),
+    ( 0.9,   0.1,  1.0,  0.0,  0.2,  0.0,  1.0,  "物体を解放\nグリッパー開"),
     # 引き上げ
     ( 0.9,  -0.3,  1.2,  0.0,  0.5,  0.0,  1.0,  "引き上げ"),
     # ホームへ帰還
@@ -349,46 +349,58 @@ def create_animation(meshes: Dict[str, np.ndarray]):
 
     # 左: 3D ビュー
     ax = fig.add_axes([0.0, 0.0, 0.62, 0.95], projection="3d")
-    ax.set_facecolor("#16213e")
+    ax.set_facecolor("#0d1b2a")
     for pane in (ax.xaxis.pane, ax.yaxis.pane, ax.zaxis.pane):
-        pane.fill = False
-        pane.set_edgecolor("#334466")
-    ax.tick_params(colors="#aaaacc", labelsize=7)
-    ax.set_xlabel("X (mm)", color="#aaaacc", fontsize=8)
-    ax.set_ylabel("Y (mm)", color="#aaaacc", fontsize=8)
-    ax.set_zlabel("Z (mm)", color="#aaaacc", fontsize=8)
-    ax.set_xlim(-250, 500)
-    ax.set_ylim(-400, 400)
-    ax.set_zlim(0, 650)
-    ax.view_init(elev=18, azim=-45)
+        pane.fill = True
+        pane.set_facecolor("#0d1b2a")
+        pane.set_edgecolor("#2a4060")
+    ax.tick_params(colors="#88aacc", labelsize=7)
+    ax.set_xlabel("X (mm)", color="#88aacc", fontsize=8)
+    ax.set_ylabel("Y (mm)", color="#88aacc", fontsize=8)
+    ax.set_zlabel("Z (mm)", color="#88aacc", fontsize=8)
+    ax.set_xlim(-150, 500)
+    ax.set_ylim(-350, 450)
+    ax.set_zlim(0, 700)
+    ax.view_init(elev=22, azim=-40)
 
-    # 作業台
-    tx = np.array([100, 450, 450, 100, 100])
-    ty = np.array([-300, -300, 300, 300, -300])
-    ax.plot(tx, ty, [0]*5, color="#445588", lw=0.8, alpha=0.5)
-    ax.plot_surface(
-        np.array([[100, 450], [100, 450]]),
-        np.array([[-300, -300], [300, 300]]),
-        np.zeros((2, 2)),
-        alpha=0.08, color="#6688bb")
+    # FK から実際の把持/解放 TCP 位置を計算 (z は投影しない)
+    _Ts_grasp = forward_kinematics(list(KEYFRAMES[3][:6]))
+    pick_pos  = _Ts_grasp[-1][:3, 3] * 1000.0          # (mm) 実際の TCP 位置
 
-    # FK から実際の把持/解放 TCP 位置を計算
-    _Ts_grasp = forward_kinematics(list(KEYFRAMES[3][:6]))   # 把持完了
-    _tcp_grasp = _Ts_grasp[-1][:3, 3] * 1000.0
-    pick_pos  = np.array([_tcp_grasp[0], _tcp_grasp[1], 0.0])  # テーブル面に投影
+    _Ts_drop = forward_kinematics(list(KEYFRAMES[7][:6]))
+    drop_pos  = _Ts_drop[-1][:3, 3] * 1000.0           # (mm) 実際の TCP 位置
 
-    _Ts_drop = forward_kinematics(list(KEYFRAMES[7][:6]))    # 物体を解放
-    _tcp_drop = _Ts_drop[-1][:3, 3] * 1000.0
-    drop_pos  = np.array([_tcp_drop[0], _tcp_drop[1], 0.0])    # テーブル面に投影
+    # 作業面高さ = 把持 TCP z - ブロック半高さ (20mm 想定)
+    BLOCK_HALF = 20.0
+    work_z = pick_pos[2] - BLOCK_HALF
 
     pick_frame = FRAMES_PER_SEG * 3   # KF[3] = 把持完了
     drop_frame = FRAMES_PER_SEG * 7   # KF[7] = 解放
 
+    # 作業台 (work_z の高さに描画)
+    _tx = np.array([ 50, 480, 480,  50,  50])
+    _ty = np.array([-350, -350, 400, 400, -350])
+    ax.plot(_tx, _ty, [work_z]*5, color="#4488bb", lw=1.2, alpha=0.8)
+    ax.plot_surface(
+        np.array([[ 50, 480], [ 50, 480]]),
+        np.array([[-350, -350], [400, 400]]),
+        np.full((2, 2), work_z),
+        alpha=0.18, color="#3366aa")
+    # 床面 (薄く)
+    ax.plot_surface(
+        np.array([[-200, 500], [-200, 500]]),
+        np.array([[-400, -400], [450, 450]]),
+        np.zeros((2, 2)),
+        alpha=0.05, color="#223355")
+
     obj_scatter = ax.scatter([pick_pos[0]], [pick_pos[1]], [pick_pos[2]],
-                              c="#ff4444", s=400, marker="s", zorder=8,
-                              depthshade=False, edgecolors="#ffaaaa", linewidths=1)
-    ax.scatter(*drop_pos, c="#44ff88", s=200, marker="^",
-               alpha=0.4, zorder=4, depthshade=False)
+                              c="#ff4444", s=500, marker="s", zorder=8,
+                              depthshade=False, edgecolors="#ffcccc", linewidths=1.5)
+    # ドロップゾーンマーカー (テーブル面に投影して表示)
+    ax.scatter([drop_pos[0]], [drop_pos[1]], [pick_pos[2]],
+               c="#44ff88", s=300, marker="^",
+               alpha=0.55, zorder=4, depthshade=False,
+               edgecolors="#aaffcc", linewidths=1)
 
     # ── メッシュ Poly3DCollection の初期生成 ───────────────────────────
     link_collections = []
@@ -492,11 +504,12 @@ def create_animation(meshes: Dict[str, np.ndarray]):
 
         # 把持オブジェクト追跡
         if fi < pick_frame:
-            obj_pos = pick_pos                   # テーブル上で静止
+            obj_pos = pick_pos                          # テーブル上で静止
         elif fi < drop_frame:
-            obj_pos = np.array([tcp[0], tcp[1], max(tcp[2], 0.0)])  # TCP に追従
+            obj_pos = tcp.copy()                        # TCP に追従 (grasped)
         else:
-            obj_pos = drop_pos                   # ドロップ後テーブル上
+            # 解放後: drop_pos の x,y、pick_pos の z (同じ作業面高さ)
+            obj_pos = np.array([drop_pos[0], drop_pos[1], pick_pos[2]])
         obj_scatter._offsets3d = ([obj_pos[0]], [obj_pos[1]], [obj_pos[2]])
 
         # TCP 軌跡
