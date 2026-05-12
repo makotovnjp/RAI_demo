@@ -61,17 +61,6 @@ URDF_JOINTS = [
     ("fixed",    [0.0,     0.0,      0.0    ], [0.0,    0.0,   0.0  ], [0, 0, 1]),
 ]
 
-# 各リンクメッシュの色 (link_base, link1 … link6)
-LINK_COLORS = [
-    [0.88, 0.88, 0.88, 0.95],  # base   — ライトグレー
-    [0.75, 0.75, 0.75, 0.95],  # link1  — シルバー
-    [0.88, 0.88, 0.88, 0.95],  # link2  — ホワイト
-    [0.75, 0.75, 0.75, 0.95],  # link3  — シルバー
-    [0.88, 0.88, 0.88, 0.95],  # link4  — ホワイト
-    [0.75, 0.75, 0.75, 0.95],  # link5  — シルバー
-    [0.88, 0.88, 0.88, 0.95],  # link6  — ホワイト
-]
-
 # STL ダウンロード URL (xarm_ros2 GitHub)
 _MESH_BASE = (
     "https://raw.githubusercontent.com/xArm-Developer"
@@ -82,7 +71,21 @@ MESH_URLS = {
     for name in ["base", "link1", "link2", "link3", "link4", "link5", "link6"]
 }
 CACHE_DIR = "stl_cache"
-DECIMATE = 35   # 1/35 のフェースを残す → 約 200~400 三角形/リンク
+DECIMATE = 15   # 1/15 のフェースを残す → 約 450~1000 三角形/リンク
+
+# --- 照明 & リンクベース色 (Lambert シェーディング用) ---
+_LIGHT = np.array([1.0, 0.8, 2.5], dtype=float)
+LIGHT_DIR = _LIGHT / np.linalg.norm(_LIGHT)
+
+LINK_BASE_COLORS_RGB = [
+    [0.82, 0.84, 0.88],  # base
+    [0.72, 0.75, 0.83],  # link1
+    [0.82, 0.84, 0.88],  # link2
+    [0.72, 0.75, 0.83],  # link3
+    [0.82, 0.84, 0.88],  # link4
+    [0.72, 0.75, 0.83],  # link5
+    [0.60, 0.68, 0.82],  # link6 (EEF) — ブルーアクセント
+]
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -126,15 +129,36 @@ def decimate(tris: np.ndarray, factor: int) -> np.ndarray:
     return tris[::factor]
 
 
-def load_meshes() -> Dict[str, np.ndarray]:
-    """全リンクメッシュをダウンロード・パース・デシメーション"""
+def compute_face_colors(tris_mm: np.ndarray, base_rgb: list,
+                        ambient: float = 0.35, diffuse: float = 0.65) -> np.ndarray:
+    """
+    ローカルメッシュ空間での Lambert シェーディング
+    戻り値: (N, 4) RGBA 配列 (各フェースに1色)
+    """
+    v0, v1, v2 = tris_mm[:, 0], tris_mm[:, 1], tris_mm[:, 2]
+    n = np.cross(v1 - v0, v2 - v0).astype(np.float64)
+    norms = np.linalg.norm(n, axis=1, keepdims=True)
+    norms = np.where(norms < 1e-10, 1.0, norms)
+    n_hat = n / norms
+    dots = np.abs(n_hat.dot(LIGHT_DIR))               # 両面ライティング
+    brightness = np.clip(ambient + diffuse * dots, 0, 1)
+    bc = np.array(base_rgb, dtype=float)
+    colors = np.clip(brightness[:, None] * bc, 0, 1)  # (N, 3)
+    alpha = np.full((len(colors), 1), 0.95)
+    return np.hstack([colors, alpha])                  # (N, 4)
+
+
+def load_meshes() -> Dict[str, tuple]:
+    """全リンクメッシュをダウンロード・パース・デシメーション・シェーディング計算"""
     meshes = {}
     names = ["base", "link1", "link2", "link3", "link4", "link5", "link6"]
-    for name in names:
+    for idx, name in enumerate(names):
         raw = download_stl(name)
         tris = parse_stl(raw)
         tris_d = decimate(tris, DECIMATE)
-        meshes[name] = tris_d * 1000.0  # m → mm
+        tris_mm = tris_d * 1000.0  # m → mm
+        face_colors = compute_face_colors(tris_mm, LINK_BASE_COLORS_RGB[idx])
+        meshes[name] = (tris_mm, face_colors)
         print(f"  {name}.stl: {len(tris)} → {len(tris_d)} 三角形")
     return meshes
 
@@ -348,11 +372,17 @@ def create_animation(meshes: Dict[str, np.ndarray]):
         np.zeros((2, 2)),
         alpha=0.08, color="#6688bb")
 
-    # 把持対象オブジェクト (赤いブロック)
-    pick_pos  = np.array([280.0, 0.0,  0.0])   # 初期位置
-    drop_pos  = np.array([180.0, 270.0, 0.0])  # 配置位置
-    pick_frame = FRAMES_PER_SEG * 3            # 把持フレーム
-    drop_frame = FRAMES_PER_SEG * 7            # 解放フレーム
+    # FK から実際の把持/解放 TCP 位置を計算
+    _Ts_grasp = forward_kinematics(list(KEYFRAMES[3][:6]))   # 把持完了
+    _tcp_grasp = _Ts_grasp[-1][:3, 3] * 1000.0
+    pick_pos  = np.array([_tcp_grasp[0], _tcp_grasp[1], 0.0])  # テーブル面に投影
+
+    _Ts_drop = forward_kinematics(list(KEYFRAMES[7][:6]))    # 物体を解放
+    _tcp_drop = _Ts_drop[-1][:3, 3] * 1000.0
+    drop_pos  = np.array([_tcp_drop[0], _tcp_drop[1], 0.0])    # テーブル面に投影
+
+    pick_frame = FRAMES_PER_SEG * 3   # KF[3] = 把持完了
+    drop_frame = FRAMES_PER_SEG * 7   # KF[7] = 解放
 
     obj_scatter = ax.scatter([pick_pos[0]], [pick_pos[1]], [pick_pos[2]],
                               c="#ff4444", s=400, marker="s", zorder=8,
@@ -366,13 +396,10 @@ def create_animation(meshes: Dict[str, np.ndarray]):
     Ts0 = forward_kinematics(q0)
 
     for i, name in enumerate(link_names):
-        tris_world = transform_mesh(meshes[name], Ts0[i])
-        coll = Poly3DCollection(
-            tris_world,
-            alpha=LINK_COLORS[i][3],
-            linewidth=0,
-        )
-        coll.set_facecolor(LINK_COLORS[i][:3])
+        tris_mm_local, face_colors = meshes[name]
+        tris_world = transform_mesh(tris_mm_local, Ts0[i])
+        coll = Poly3DCollection(tris_world, linewidth=0)
+        coll.set_facecolor(face_colors)       # per-face Lambert shading
         coll.set_edgecolor("none")
         ax.add_collection3d(coll)
         link_collections.append(coll)
@@ -438,9 +465,10 @@ def create_animation(meshes: Dict[str, np.ndarray]):
         q, grip, label = frames[fi]
         Ts = forward_kinematics(q)
 
-        # メッシュを更新
+        # メッシュを更新 (ジオメトリのみ、フェース色はローカル空間で固定)
         for i, name in enumerate(link_names):
-            tris_w = transform_mesh(meshes[name], Ts[i])
+            tris_mm_local = meshes[name][0]
+            tris_w = transform_mesh(tris_mm_local, Ts[i])
             link_collections[i].set_verts(tris_w)
 
         # ジョイントマーカー
@@ -464,11 +492,11 @@ def create_animation(meshes: Dict[str, np.ndarray]):
 
         # 把持オブジェクト追跡
         if fi < pick_frame:
-            obj_pos = pick_pos
+            obj_pos = pick_pos                   # テーブル上で静止
         elif fi < drop_frame:
-            obj_pos = tcp + Ts[-1][:3, 2] * 20  # TCP 先端に追従
+            obj_pos = np.array([tcp[0], tcp[1], max(tcp[2], 0.0)])  # TCP に追従
         else:
-            obj_pos = drop_pos
+            obj_pos = drop_pos                   # ドロップ後テーブル上
         obj_scatter._offsets3d = ([obj_pos[0]], [obj_pos[1]], [obj_pos[2]])
 
         # TCP 軌跡
