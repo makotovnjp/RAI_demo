@@ -435,38 +435,46 @@ def create_animation(meshes: Dict[str, np.ndarray]):
 
     # ── 右側情報パネル ───────────────────────────────────────────────
     ax_info = fig.add_axes([0.63, 0.05, 0.36, 0.88])
-    ax_info.set_facecolor("#0f3460")
+    ax_info.set_facecolor("#09152a")
     ax_info.set_xlim(0, 1)
     ax_info.set_ylim(0, 1)
     ax_info.axis("off")
 
-    ax_info.text(0.5, 0.97, "RAI エージェント ログ",
-                 ha="center", va="top", color="white",
-                 fontsize=11, fontweight="bold")
-    ax_info.plot([0.02, 0.98], [0.93, 0.93], color="#445588", lw=0.8)
+    # パネルヘッダー
+    ax_info.text(0.5, 0.97, "RAI Agent Log",
+                 ha="center", va="top", color="#ffffff",
+                 fontsize=11, fontweight="bold", fontfamily="monospace")
+    ax_info.plot([0.02, 0.98], [0.93, 0.93], color="#2255aa", lw=1.2)
 
-    log_text  = ax_info.text(0.05, 0.89, "", ha="left", va="top",
-                              color="#a0e7e5", fontsize=8.5, linespacing=1.7,
-                              fontfamily="monospace")
+    # ツールログ — 明るい白で高コントラスト
+    log_text = ax_info.text(0.05, 0.90, "", ha="left", va="top",
+                             color="#ffffff", fontsize=8.5, linespacing=1.75,
+                             fontfamily="monospace")
+
+    # タスクラベル — 黄色で視認性強調
     task_label = ax_info.text(0.5, 0.28, "", ha="center", va="center",
-                               color="white", fontsize=11, fontweight="bold",
-                               bbox=dict(boxstyle="round,pad=0.5",
-                                         facecolor="#1a1a2e",
-                                         edgecolor="#e94560", linewidth=2))
-    ax_info.text(0.05, 0.12, "進捗:", ha="left", va="center",
-                 color="#aaaacc", fontsize=8)
-    ax_info.plot([0.05, 0.95], [0.095, 0.095], color="#334466", lw=14,
+                               color="#ffe566", fontsize=12, fontweight="bold",
+                               bbox=dict(boxstyle="round,pad=0.55",
+                                         facecolor="#0d1f3c",
+                                         edgecolor="#ff6b35", linewidth=2.5))
+
+    # 進捗バー
+    ax_info.text(0.05, 0.135, "Progress:", ha="left", va="center",
+                 color="#aaccee", fontsize=8, fontfamily="monospace")
+    ax_info.plot([0.05, 0.95], [0.105, 0.105], color="#1a2d50", lw=14,
                  solid_capstyle="butt")
-    prog_bar, = ax_info.plot([0.05, 0.05], [0.095, 0.095], color="#e94560",
+    prog_bar, = ax_info.plot([0.05, 0.05], [0.105, 0.105], color="#ff6b35",
                               lw=14, solid_capstyle="butt")
 
-    # 関節角度テキスト
-    joint_text = ax_info.text(0.05, 0.57, "", ha="left", va="top",
-                               color="#d0d0d0", fontsize=7.5,
-                               fontfamily="monospace", linespacing=1.6)
+    # 関節角度テキスト — 明るいシアン系
+    joint_text = ax_info.text(0.05, 0.58, "", ha="left", va="top",
+                               color="#b8deff", fontsize=8.0,
+                               fontfamily="monospace", linespacing=1.65)
 
+    # フレームカウンター
     frame_ctr = ax_info.text(0.95, 0.04, "", ha="right", va="bottom",
-                               color="#666688", fontsize=7)
+                               color="#7799bb", fontsize=7.5,
+                               fontfamily="monospace")
 
     LOG_LINES: List[str] = []
 
@@ -528,11 +536,12 @@ def create_animation(meshes: Dict[str, np.ndarray]):
         prog = fi / FRAMES_PER_SEG - seg
         if seg < len(KEYFRAMES) - 1:
             log = (
-                f"[Tool→] move_to_pose\n"
-                f"  q=[{', '.join(f'{np.degrees(a):.0f}' for a in q)}]°\n"
-                f"  TCP=({tcp[0]:.0f},{tcp[1]:.0f},{tcp[2]:.0f})mm\n"
-                f"[←Tool] 移動中 {prog*100:.0f}%\n"
-                f"[Tool→] control_gripper\n"
+                f"[Tool ->] move_to_pose\n"
+                f"  q=[{', '.join(f'{np.degrees(a):.0f}' for a in q)}]deg\n"
+                f"  TCP=({tcp[0]:.0f}, {tcp[1]:.0f}, {tcp[2]:.0f}) mm\n"
+                f"[<- Tool] done {prog*100:.0f}%\n"
+                f"\n"
+                f"[Tool ->] control_gripper\n"
                 f"  position={grip:.2f}\n"
             )
             if not LOG_LINES or LOG_LINES[-1] != log:
@@ -552,7 +561,7 @@ def create_animation(meshes: Dict[str, np.ndarray]):
         # プログレスバー
         p = (fi + 1) / total
         prog_bar.set_xdata([0.05, 0.05 + 0.90 * p])
-        prog_bar.set_ydata([0.095, 0.095])
+        prog_bar.set_ydata([0.105, 0.105])
 
         frame_ctr.set_text(f"{fi/FPS:.1f}s / {total/FPS:.1f}s")
 
